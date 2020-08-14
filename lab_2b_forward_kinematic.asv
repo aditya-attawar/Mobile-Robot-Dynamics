@@ -1,0 +1,114 @@
+dt=5e-3;
+
+%x,y path
+figure(1)
+num=50;
+h=0;
+k=0.6096;
+t=linspace(-pi/2,pi/2,num);
+a=0.3048;
+b=0.6096;
+x=h+a*cos(t);
+y=k+b*sin(t);
+
+theta_b=atan((0.6096-y)./(0.9144-x));
+
+%difference of x and y
+xdot=diff(x)/delta_t;
+ydot=diff(y)/delta_t;
+phidot=diff(theta_b)/delta_t;
+traj_dot=[xdot;ydot;phidot];
+
+%find motor velocity
+for i=1:49
+    F=function_F(theta_b(i));
+    qdot(:,i)=F*traj_dot(:,i);
+end
+%get joints
+joint_traj=cumsum(qdot,2)*delta_t;
+figure
+subplot(2,1,2)
+time=linspace(0,10,length(joint_traj));
+plot(time,joint_traj(1,:))
+hold on 
+plot(time,joint_traj(2,:))
+plot(time,joint_traj(3,:))
+legend('motor 1','motor 2','motor 3');
+title('desired motor angles')
+xlabel('Time (s)'); ylabel('Angle(radians)')
+
+%plot x(t),y(t)
+subplot(2,1,1)
+time2=linspace(0,10,length(x));
+yyaxis left
+plot(time2,x)
+hold on
+plot(time2,y)
+ylabel('Distance(meters)')
+yyaxis right
+plot(time2,theta_b)
+ylabel('Angle(radians)')
+legend('x(t)','y(t)','theta b')
+title('path of x,y,theta b')
+xlabel('Time (s)'); 
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%forward kinematic
+rw = 0.032; 
+L = 0.101; 
+dt=5e-3;
+% theta_b=-rw/(3*L)*(my_data.signals.values(:,1)+my_data1.signals.values(:,1)+my_data2.signals.values(:,1));
+theta1=my_data.signals.values(:,1);
+theta2=my_data1.signals.values(:,1);
+theta3=my_data2.signals.values(:,1);
+
+theta_dot=zeros(3,length(theta1)-1);
+theta_dot(1,:)=diff(theta1)./dt;
+theta_dot(2,:)=diff(theta2)./dt;
+theta_dot(3,:)=diff(theta3)./dt;
+
+
+theta_bdot=-(rw/(3*L))*[1 1 1]*theta_dot;
+theta_b=(cumsum(theta_bdot))*dt + atan(0.6096./0.9144);
+
+for i=1:length(theta_b)
+    J_b1=function_J(theta_b(i));
+    xi_dot(:,i)=J_b1*theta_dot(:,i);
+end
+x_dot=xi_dot(1,:);
+y_dot=xi_dot(2,:);
+
+xfinal=cumsum(x_dot)*dt;
+yfinal=cumsum(y_dot)*dt;
+
+clf;
+%plot x(t),y(t)
+time2=linspace(0,10,length(x));
+yyaxis left
+plot(time2,x)
+hold on
+plot(time2,y)
+ylabel('Distance(meters)')
+yyaxis right
+plot(time2,theta_b)
+ylabel('Angle(radians)')
+legend('x(t)','y(t)','theta b')
+title('path of x,y,theta b')
+xlabel('Time (s)'); 
+
+
+plot(theta_b)
+title('theta_b(t)')
+figure
+plot(xfinal)
+title('x(t)')
+figure
+plot(yfinal)
+title('y(t)')
+figure
+plot(x,y);
+axis([0 0.9144 0 1.2192]);
+title('desired trejactory and target location')
+axis equal
+hold on
+plot(xfinal,yfinal)
